@@ -22,7 +22,7 @@ const SMPP_PASSWORD = '@irtElq1';
 const PARALLEL_JOBS = 10;
 
 // Connexion SMPP
-const session = new smpp.Session({ host: SMPP_HOST, port: SMPP_PORT });
+const session = new smpp.Session({ host: 'messaging.airtel.cd', port: 9001, debug: true, auto_enquire_link_period: 10000, connectTimeout: 20000 });
 
 session.on('error', (err) => {
   console.error('SMPP session error:', err);
