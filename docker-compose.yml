@@ -1,0 +1,20 @@
+version: '3.9'
+
+services:
+
+  js-sms-worker:
+    build: ./worker
+    container_name: js-sms-worker
+    environment:
+      - REDIS_URL=redis://ussd-redis:6379
+      - SMPP_HOST=smpp.server.com
+      - SMPP_PORT=2775
+      - SMPP_SYSTEM_ID=your_system_id
+      - SMPP_PASSWORD=your_password 
+      
+    networks:
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true

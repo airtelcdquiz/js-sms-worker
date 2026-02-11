@@ -1,0 +1,88 @@
+const smpp = require('smpp');
+const Queue = require('bull');
+const REDIS_URL = 'redis://ussd-redis:6379';
+
+// Création de la queue
+const smsQueue = new Queue('sms_queue', REDIS_URL);
+
+const smppConfig = {
+    host: 'messaging.airtel.cd',  // Adresse du serveur SMPP
+    port: 9001,               // Port du serveur SMPP
+    system_id: 'AirtelQuiz',   // Identifiant système SMPP
+    password: '@irtElq1',     // Mot de passe
+    source_addr: 'AirtelQuiz',   // ID de l'expéditeur
+  };
+
+// Config SMPP
+const SMPP_HOST = 'messaging.airtel.cd';
+const SMPP_PORT = 9001;
+const SMPP_SYSTEM_ID = 'AirtelQuiz';
+const SMPP_SOURCE_ADDR = 'AirtelQuiz';
+const SMPP_PASSWORD = '@irtElq1';
+const PARALLEL_JOBS = 10;
+
+// Connexion SMPP
+const session = new smpp.Session({ host: SMPP_HOST, port: SMPP_PORT });
+
+session.on('error', (err) => {
+  console.error('SMPP session error:', err);
+});
+
+session.on('close', () => {
+  console.log('SMPP session closed, retrying in 5s...');
+  setTimeout(bindSmpp, 5000);
+});
+
+function bindSmpp() {
+  session.bind_transceiver({
+    system_id: SMPP_SYSTEM_ID,
+    password: SMPP_PASSWORD,
+  }, (pdu) => {
+    if (pdu.command_status === 0) {
+      console.log('SMPP connected successfully');
+      startProcessing();
+    } else {
+      console.error('SMPP bind failed, retrying in 5s...');
+      setTimeout(bindSmpp, 5000);
+    }
+  });
+}
+
+// Envoyer un SMS
+function sendSMS(job) {
+  return new Promise((resolve, reject) => {
+    const { phoneNumber, message, meta } = job.data;
+
+    session.submit_sm({
+      source_addr: SMPP_SOURCE_ADDR,
+      destination_addr: phoneNumber,
+      short_message: message,
+    }, (pdu) => {
+      if (pdu.command_status === 0) {
+        console.log(`SMS envoyé: ${phoneNumber} (jobId=${job.id})`);
+        resolve();
+      } else {
+        console.error(`Erreur SMS: ${phoneNumber} (jobId=${job.id})`, pdu);
+        reject(new Error(`SMPP error code ${pdu.command_status}`));
+      }
+    });
+  });
+}
+
+// Lancer le worker Bull
+function startProcessing() {
+  smsQueue.process(PARALLEL_JOBS, async (job) => {
+    return sendSMS(job);
+  });
+
+  smsQueue.on('completed', (job) => {
+    console.log(`Job ${job.id} terminé avec succès`);
+  });
+
+  smsQueue.on('failed', (job, err) => {
+    console.error(`Job ${job.id} échoué:`, err.message);
+  });
+}
+
+// Lancer le bind SMPP
+bindSmpp();
