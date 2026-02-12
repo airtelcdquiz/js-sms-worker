@@ -24,14 +24,34 @@ const PARALLEL_JOBS = 10;
 // Connexion SMPP
 const session = new smpp.Session({ host: 'messaging.airtel.cd', port: 9001, debug: true, auto_enquire_link_period: 10000, connectTimeout: 20000 });
 
-session.on('error', (err) => {
-  console.error('SMPP session error:', err);
-});
+  session.on('connect', () => {
+    console.log(`Session SMPP connectée`);
+    session.bind_transceiver({
+      system_id: smppConfig.system_id,
+      password: smppConfig.password
+    });
+  });
 
-session.on('close', () => {
-  console.log('SMPP session closed, retrying in 5s...');
-  setTimeout(bindSmpp, 5000);
-});
+  session.on('bind_transceiver', (pdu) => {
+    if (pdu.command_status === 0) {
+      console.log(`Session SMPP liée avec succès`);
+    }
+  });
+
+  session.on('close', () => {
+    console.log(`Session SMPP fermée`);
+    // Réessayer de reconnecter la session
+    reconnectSession(session, i);
+  });
+
+  session.on('error', (err) => {
+    console.log(`Erreur sur la session SMPP:`, err);
+    // Réessayer de reconnecter la session
+    reconnectSession(session, i);
+  });
+
+  smppSessions.push(session);
+
 
 function bindSmpp() {
   session.bind_transceiver({
