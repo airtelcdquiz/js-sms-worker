@@ -1,107 +1,98 @@
 const smpp = require('smpp');
 const Queue = require('bull');
-const REDIS_URL = 'redis://ussd-redis:6379';
 
-// Création de la queue
+const REDIS_URL = 'redis://ussd-redis:6379';
 const smsQueue = new Queue('sms_queue', REDIS_URL);
 
-const smppConfig = {
-    host: 'messaging.airtel.cd',  // Adresse du serveur SMPP
-    port: 9001,               // Port du serveur SMPP
-    system_id: 'AirtelQuiz',   // Identifiant système SMPP
-    password: '@irtElq1',     // Mot de passe
-    source_addr: 'AirtelQuiz',   // ID de l'expéditeur
-  };
+const SMPP_CONFIG = {
+  host: 'messaging.airtel.cd',
+  port: 9001,
+  system_id: 'AirtelQuiz',
+  password: '@irtElq1',
+  source_addr: 'AirtelQuiz',
+};
 
-// Config SMPP
-const SMPP_HOST = 'messaging.airtel.cd';
-const SMPP_PORT = 9001;
-const SMPP_SYSTEM_ID = 'AirtelQuiz';
-const SMPP_SOURCE_ADDR = 'AirtelQuiz';
-const SMPP_PASSWORD = '@irtElq1';
 const PARALLEL_JOBS = 10;
 
-// Connexion SMPP
-const session = new smpp.Session({ host: 'messaging.airtel.cd', port: 9001, debug: true, auto_enquire_link_period: 10000, connectTimeout: 20000 });
+let session;
+let isBound = false;
+
+function connectSmpp() {
+  session = new smpp.Session({
+    host: SMPP_CONFIG.host,
+    port: SMPP_CONFIG.port,
+    auto_enquire_link_period: 10000,
+    connectTimeout: 20000,
+  });
 
   session.on('connect', () => {
-    console.log(`Session SMPP connectée`);
+    console.log('SMPP connected, binding...');
     session.bind_transceiver({
-      system_id: smppConfig.system_id,
-      password: smppConfig.password
+      system_id: SMPP_CONFIG.system_id,
+      password: SMPP_CONFIG.password,
     });
   });
 
-  session.on('bind_transceiver', (pdu) => {
+  session.on('bind_transceiver_resp', (pdu) => {
     if (pdu.command_status === 0) {
-      console.log(`Session SMPP liée avec succès`);
+      console.log('SMPP bind SUCCESS');
+      isBound = true;
+      startProcessing();
+    } else {
+      console.error('SMPP bind FAILED:', pdu.command_status);
+      setTimeout(connectSmpp, 5000);
     }
   });
 
   session.on('close', () => {
-    console.log(`Session SMPP fermée`);
-    // Réessayer de reconnecter la session
-    reconnectSession(session, i);
+    console.log('SMPP session closed');
+    isBound = false;
+    setTimeout(connectSmpp, 5000);
   });
 
   session.on('error', (err) => {
-    console.log(`Erreur sur la session SMPP:`, err);
-    // Réessayer de reconnecter la session
-    reconnectSession(session, i);
-  });
- 
-
-
-function bindSmpp() {
-  session.bind_transceiver({
-    system_id: SMPP_SYSTEM_ID,
-    password: SMPP_PASSWORD,
-  }, (pdu) => {
-    if (pdu.command_status === 0) {
-      console.log('SMPP connected successfully');
-      startProcessing();
-    } else {
-      console.error('SMPP bind failed, retrying in 5s...');
-      setTimeout(bindSmpp, 5000);
-    }
+    console.error('SMPP error:', err);
+    isBound = false;
   });
 }
 
-// Envoyer un SMS
 function sendSMS(job) {
   return new Promise((resolve, reject) => {
-    const { phoneNumber, message, meta } = job.data;
+    if (!isBound) {
+      return reject(new Error('SMPP not bound'));
+    }
+
+    const { phoneNumber, message } = job.data;
 
     session.submit_sm({
-      source_addr: SMPP_SOURCE_ADDR,
+      source_addr: SMPP_CONFIG.source_addr,
+      dest_addr_ton: 1,
+      dest_addr_npi: 1,
       destination_addr: phoneNumber,
       short_message: message,
     }, (pdu) => {
       if (pdu.command_status === 0) {
-        console.log(`SMS envoyé: ${phoneNumber} (jobId=${job.id})`);
+        console.log(`SMS envoyé à ${phoneNumber}`);
         resolve();
       } else {
-        console.error(`Erreur SMS: ${phoneNumber} (jobId=${job.id})`, pdu);
-        reject(new Error(`SMPP error code ${pdu.command_status}`));
+        reject(new Error(`SMPP error ${pdu.command_status}`));
       }
     });
   });
 }
 
-// Lancer le worker Bull
 function startProcessing() {
   smsQueue.process(PARALLEL_JOBS, async (job) => {
     return sendSMS(job);
   });
 
   smsQueue.on('completed', (job) => {
-    console.log(`Job ${job.id} terminé avec succès`);
+    console.log(`Job ${job.id} completed`);
   });
 
   smsQueue.on('failed', (job, err) => {
-    console.error(`Job ${job.id} échoué:`, err.message);
+    console.error(`Job ${job.id} failed:`, err.message);
   });
 }
 
-// Lancer le bind SMPP
-bindSmpp();
+connectSmpp();
