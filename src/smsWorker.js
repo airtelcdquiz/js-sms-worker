@@ -49,8 +49,7 @@ const session = new smpp.Session({ host: 'messaging.airtel.cd', port: 9001, debu
     // Réessayer de reconnecter la session
     reconnectSession(session, i);
   });
-
-  smppSessions.push(session);
+ 
 
 
 function bindSmpp() {
