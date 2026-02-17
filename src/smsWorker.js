@@ -107,8 +107,8 @@ for (let i = 0; i < 10; i++) {
   session.on('connect', () => {
     console.log(`Session SMPP ${i + 1} connectée`);
     session.bind_transceiver({
-      system_id: smppConfig.system_id,
-      password: smppConfig.password
+      system_id: SMPP_CONFIG.system_id,
+      password: SMPP_CONFIG.password
     });
   });
 
