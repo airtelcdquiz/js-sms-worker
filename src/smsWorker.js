@@ -67,6 +67,9 @@ function sendSMS(job) {
 
     session.submit_sm({
       source_addr: SMPP_CONFIG.source_addr,
+      service_type: '',
+      source_addr_ton: 5,
+      source_addr_npi: 0,
       dest_addr_ton: 1,
       dest_addr_npi: 1,
       destination_addr: `+${phoneNumber}`,
