@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "bull": "^4.16.5",
+    "dotenv": "^17.3.1",
     "ioredis": "^5.9.2",
     "smpp": "^0.6.0-rc.4"
   }
