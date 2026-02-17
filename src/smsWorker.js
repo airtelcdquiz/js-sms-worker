@@ -12,6 +12,7 @@ const SMPP_CONFIG = {
   source_addr: 'AirtelQuiz',
 };
 
+
 const PARALLEL_JOBS = 10;
 
 let session;
@@ -68,11 +69,12 @@ function sendSMS(job) {
       source_addr: SMPP_CONFIG.source_addr,
       dest_addr_ton: 1,
       dest_addr_npi: 1,
-      destination_addr: phoneNumber,
+      destination_addr: `+${phoneNumber}`,
       short_message: message,
     }, (pdu) => {
       if (pdu.command_status === 0) {
-        console.log(`SMS envoyé à ${phoneNumber}`);
+        console.log(`SMS envoyé à +${phoneNumber}`);
+        console.log(`SMS : ${message}`)
         resolve();
       } else {
         reject(new Error(`SMPP error ${pdu.command_status}`));
