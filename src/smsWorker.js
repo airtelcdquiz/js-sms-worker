@@ -8,7 +8,7 @@ const SMPP_CONFIG = {
   host: 'messaging.airtel.cd',
   port: 9001,
   system_id: 'AirtelQuiz',
-  password: '@irtElq1',
+  password: 'Quiz@999',
   source_addr: 'AirtelQuiz',
 };
 
