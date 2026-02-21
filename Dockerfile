@@ -11,4 +11,4 @@ RUN yarn install --production
 COPY . .
 
 # Lancer le worker
-CMD ["node", "src/server.js"]
+#CMD ["node", "src/server.js"]
