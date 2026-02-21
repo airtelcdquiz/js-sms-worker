@@ -10,7 +10,7 @@ services:
       - SMPP_HOST=messaging.airtel.cd
       - SMPP_PORT=9001
       - SMPP_SYSTEM_ID=AirtelQuiz
-      - SMPP_PASSWORD=@irtElq1 
+      - SMPP_PASSWORD=Quiz@999
 
     networks:
       - dokploy-network
