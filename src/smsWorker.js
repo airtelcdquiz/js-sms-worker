@@ -94,7 +94,6 @@ const sendMultipleSMS = async (phoneNumber, messages) => {
 // Processus Bull pour envoyer les SMS
 smsQueue.process(10, async (job, done) => {
     const { meta } = job.data ;
-    const { phoneNumber, message } = job.data; 
 
     try {
       if( meta.type == "bulk-message" ){
@@ -103,7 +102,9 @@ smsQueue.process(10, async (job, done) => {
         done()
       }
       if ( meta.type == "message" ) {
+        const { phoneNumber, message } = job.data; 
         const session = getAvailableSession();
+        
         // Utilisation de la session SMPP disponible pour l'envoi du SMS
         await sendSMS(session, phoneNumber, message);
         console.log(`SMS envoyé à ${phoneNumber}`);
