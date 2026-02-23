@@ -12,8 +12,6 @@ const SMPP_CONFIG = {
   source_addr: 'AirtelQuiz',
 };
 
-const cleanMessage = message ? removeAccents(truncateString(`${message}`, 160)) : '';
-
 // Initialiser 10 sessions SMPP dans un pool
 const smppSessions = [];
 let sessionIndex = 0;
