@@ -93,16 +93,16 @@ const sendMultipleSMS = async (phoneNumber, messages) => {
 
 // Processus Bull pour envoyer les SMS
 smsQueue.process(10, async (job, done) => {
-    const { jobType } = job.data ;
+    const { meta } = job.data ;
     const { phoneNumber, message } = job.data; 
 
     try {
-      if( jobType == "bulk-message" ){
+      if( meta.type == "bulk-message" ){
         const { phoneNumber, messages } = job.data;
         await sendMultipleSMS(phoneNumber, messages);
         done()
       }
-      if ( jobType == "message" ) {
+      if ( meta.type == "message" ) {
         const session = getAvailableSession();
         // Utilisation de la session SMPP disponible pour l'envoi du SMS
         await sendSMS(session, phoneNumber, message);
