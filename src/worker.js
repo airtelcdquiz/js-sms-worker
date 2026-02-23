@@ -4,7 +4,7 @@ const { sendSMS, sendMultipleSMS } = require("./smppClient.js");
 
 console.log("🚀 Worker SMS démarré...");
 
-smsQueue.process(5, async (job) => {
+smsQueue.process(5, async (job, done) => {
   const { meta } = job.data;
   try {
     if (meta.type === 'bulk-message') {
