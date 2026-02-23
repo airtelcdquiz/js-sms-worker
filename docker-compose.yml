@@ -4,31 +4,17 @@ services:
 
   js-sms-worker:
     build: .
-    container_name: js-sms-worker
-    environment:
-      - REDIS_URL=redis://ussd-redis:6379
-      - SMPP_HOST=messaging.airtel.cd
-      - SMPP_PORT=9001
-      - SMPP_SYSTEM_ID=AirtelQuiz
-      - SMPP_PASSWORD=Quiz@999
-    command: node src/smsWorker.js
-
+    container_name: js-sms-worker 
+    command: node src/worker.js
     networks:
       - dokploy-network
 
   js-sms-worker-api:
     build: .
-    container_name: js-sms-worker-api
-    environment:
-      - REDIS_URL=redis://ussd-redis:6379
-      - SMPP_HOST=messaging.airtel.cd
-      - SMPP_PORT=9001
-      - SMPP_SYSTEM_ID=AirtelQuiz
-      - SMPP_PASSWORD=Quiz@999
+    container_name: js-sms-worker-api 
     expose:
       - "3000"
     command: node src/server.js
-
     networks:
       - dokploy-network
 

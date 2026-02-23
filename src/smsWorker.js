@@ -1,15 +1,21 @@
 const smpp = require('smpp');
 const Queue = require('bull');
 
-const REDIS_URL = 'redis://ussd-redis:6379';
+const REDIS_URL = process.env.REDIS_URL
 const smsQueue = new Queue('sms_queue', REDIS_URL);
 
+const SMPP_HOST = process.env.SMPP_HOST;
+const SMPP_PORT = Number(process.env.SMPP_PORT);
+const SYSTEM_ID = process.env.SMPP_SYSTEM_ID;
+const PASSWORD = process.env.SMPP_PASSWORD;
+const SOURCE_ADDR = process.env.SMPP_SOURCE_ADDR;
+
 const SMPP_CONFIG = {
-  host: 'messaging.airtel.cd',
-  port: 9001,
-  system_id: 'AirtelQuiz',
-  password: 'Quiz@999',
-  source_addr: 'AirtelQuiz',
+  host: SMPP_HOST,
+  port: SMPP_PORT,
+  system_id: SYSTEM_ID,
+  password: PASSWORD,
+  source_addr: SOURCE_ADDR,
 };
 
 const smppSessions = [];

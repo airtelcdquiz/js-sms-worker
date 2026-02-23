@@ -1,11 +1,11 @@
 require("dotenv").config();
 const smpp = require("smpp");
 
-const SMPP_HOST = process.env.SMPP_HOST || "messaging.airtel.cd";
-const SMPP_PORT = Number(process.env.SMPP_PORT || 9001);
-const SYSTEM_ID = process.env.SMPP_SYSTEM_ID || "AirtelQuiz";
-const PASSWORD = process.env.SMPP_PASSWORD || "@irtElq1";
-const SOURCE_ADDR = process.env.SMPP_SOURCE_ADDR || "AirtelQuiz";
+const SMPP_HOST = process.env.SMPP_HOST;
+const SMPP_PORT = Number(process.env.SMPP_PORT);
+const SYSTEM_ID = process.env.SMPP_SYSTEM_ID;
+const PASSWORD = process.env.SMPP_PASSWORD;
+const SOURCE_ADDR = process.env.SMPP_SOURCE_ADDR;
 
 function sendSMS(phoneNumber, message) {
   return new Promise((resolve, reject) => {
