@@ -92,6 +92,7 @@ smsQueue.process(10, async (job, done) => {
       // Utilisation de la session SMPP disponible pour l'envoi du SMS
       await sendSMS(session, phoneNumber, message);
       console.log(`SMS envoyé à ${phoneNumber}`);
+      console.log(`SMS >> ${message}`);
       done()
     } catch (error) {
       console.error(`Erreur lors de l'envoi du SMS à ${phoneNumber}:`, error.message);
