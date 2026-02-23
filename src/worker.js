@@ -5,18 +5,21 @@ const { sendSMS } = require("./smppClient.js");
 console.log("🚀 Worker SMS démarré...");
 
 smsQueue.process(5, async (job) => {
-  const { phoneNumber, message } = job.data;
-
-  console.log("📩 Envoi vers:", phoneNumber);
-
+  const { meta } = job.data;
   try {
-    const messageId = await sendSMS(phoneNumber, message);
-    console.log("✅ SMS envoyé:", messageId);
-
-    return { status: "sent", messageId };
+    if (meta.type === 'bulk-message') {
+      const { phoneNumber, messages } = job.data;
+      await sendMultipleSMS(phoneNumber, messages);
+      done();
+    } else if (meta.type === 'message') {
+      const { phoneNumber, message } = job.data;
+      const session = getAvailableSession();
+      await sendSMS(session, phoneNumber, message);
+      done();
+    }
   } catch (error) {
-    console.error("❌ Erreur envoi SMS:", error);
-    throw error; // Bull gère retry
+    console.error(`Erreur lors de l'envoi du SMS à ${job.data.phoneNumber}:`, error.message);
+    done({ message: error.message });
   }
 });
 

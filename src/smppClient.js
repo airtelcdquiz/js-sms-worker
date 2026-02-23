@@ -7,6 +7,7 @@ const SYSTEM_ID = process.env.SMPP_SYSTEM_ID;
 const PASSWORD = process.env.SMPP_PASSWORD;
 const SOURCE_ADDR = process.env.SMPP_SOURCE_ADDR;
 
+
 function sendSMS(phoneNumber, message) {
   return new Promise((resolve, reject) => {
     const session = new smpp.Session({
@@ -58,4 +59,20 @@ function sendSMS(phoneNumber, message) {
   });
 }
 
-module.exports = { sendSMS };
+// Envoi séquentiel d'un tableau de messages
+const sendMultipleSMS = async (phoneNumber, messages) => {
+  for (let i = 0; i < messages.length; i++) {
+   
+    try {
+      await sendSMS(phoneNumber, messages[i]);
+      console.log(`SMS ${i + 1}/${messages.length} confirmé pour +${phoneNumber}`);
+    } catch (err) {
+      console.error(`Échec de l'envoi du SMS ${i + 1} à +${phoneNumber}:`, err.message);
+      // Option: stoppe la séquence en cas d'erreur
+      // throw err;
+    }
+  }
+};
+
+
+module.exports = { sendSMS, sendMultipleSMS };
