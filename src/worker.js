@@ -1,6 +1,6 @@
 require("dotenv").config();
 const smsQueue = require("./smsQueue");
-const { sendSMS } = require("./smppClient");
+const { sendSMS } = require("./smsWorker.js");
 
 console.log("🚀 Worker SMS démarré...");
 
