@@ -12,11 +12,9 @@ const SMPP_CONFIG = {
   source_addr: 'AirtelQuiz',
 };
 
-// Pool de sessions SMPP
 const smppSessions = [];
 let sessionIndex = 0;
 
-// Reconnexion des sessions perdues
 const reconnectSession = (session, index) => {
   setTimeout(() => {
     console.log(`Tentative de reconnexion de la session SMPP ${index + 1}`);
@@ -24,7 +22,6 @@ const reconnectSession = (session, index) => {
   }, 5000);
 };
 
-// Round-robin pour obtenir une session disponible
 const getAvailableSession = () => {
   let attempts = 0;
   while (attempts < smppSessions.length) {
@@ -39,26 +36,29 @@ const getAvailableSession = () => {
   return null;
 };
 
-// Envoi d'un SMS avec delivery receipt
-const sendSMS = (session, phoneNumber, message) => {
+// Envoi d'un SMS avec delivery receipt et timeout
+const sendSMS = (session, phoneNumber, message, timeout = 30000) => {
   return new Promise((resolve, reject) => {
     if (!session) return reject(new Error('Aucune session SMPP disponible'));
+    if (!phoneNumber) return reject(new Error('Numéro vide'));
     if (!message) return reject(new Error('Message vide'));
 
     const cleanMessage = removeAccents(truncateString(`${message}`, 160));
 
-    // Ecouter le deliver_sm pour ce message
+    let timeoutId;
+
     const handleDeliveryReceipt = (pdu) => {
-      if (pdu.esm_class === 4) { // C'est un delivery receipt
+      if (pdu.esm_class === 4) {
         const receipt = pdu.short_message.toString();
-        // Ex: id:12345 sub:001 dlvrd:001 submit date:... done date:... stat:DELIVRD
         if (receipt.includes('stat:DELIVRD')) {
-          console.log(`Delivery receipt confirmé pour +${phoneNumber}`);
+          clearTimeout(timeoutId);
           session.removeListener('deliver_sm', handleDeliveryReceipt);
+          console.log(`Delivery receipt confirmé pour +${phoneNumber}`);
           resolve(true);
         } else {
-          console.error(`Delivery failed pour +${phoneNumber}: ${receipt}`);
+          clearTimeout(timeoutId);
           session.removeListener('deliver_sm', handleDeliveryReceipt);
+          console.error(`Delivery failed pour +${phoneNumber}: ${receipt}`);
           reject(new Error(`Delivery failed: ${receipt}`));
         }
       }
@@ -66,25 +66,37 @@ const sendSMS = (session, phoneNumber, message) => {
 
     session.on('deliver_sm', handleDeliveryReceipt);
 
-    session.submit_sm({
-      source_addr: 'AirtelQuiz',
-      service_type: '',
-      source_addr_ton: 5,
-      source_addr_npi: 0,
-      dest_addr_ton: 1,
-      dest_addr_npi: 1,
-      destination_addr: `+${phoneNumber}`,
-      short_message: cleanMessage,
-      registered_delivery: 1, // ⚡ demande le delivery receipt
-    }, (pdu) => {
-      if (!pdu) return reject(new Error('PDU vide reçu'));
-      if (pdu.command_status !== 0) {
-        session.removeListener('deliver_sm', handleDeliveryReceipt);
-        reject(new Error(`Failed to send SMS: ${pdu.command_status}`));
-      } else {
-        console.log(`SMS soumis à +${phoneNumber}, attente du delivery receipt...`);
-      }
-    });
+    timeoutId = setTimeout(() => {
+      session.removeListener('deliver_sm', handleDeliveryReceipt);
+      reject(new Error(`Timeout delivery receipt pour +${phoneNumber}`));
+    }, timeout);
+
+    try {
+      session.submit_sm({
+        source_addr: SMPP_CONFIG.source_addr || 'AirtelQuiz',
+        service_type: '',
+        source_addr_ton: 5,
+        source_addr_npi: 0,
+        dest_addr_ton: 1,
+        dest_addr_npi: 1,
+        destination_addr: `+${phoneNumber}`,
+        short_message: cleanMessage,
+        registered_delivery: 1,
+      }, (pdu) => {
+        if (!pdu) return reject(new Error('PDU vide reçu'));
+        if (pdu.command_status !== 0) {
+          clearTimeout(timeoutId);
+          session.removeListener('deliver_sm', handleDeliveryReceipt);
+          reject(new Error(`Failed to send SMS: ${pdu.command_status}`));
+        } else {
+          console.log(`SMS soumis à +${phoneNumber}, attente du delivery receipt...`);
+        }
+      });
+    } catch (err) {
+      clearTimeout(timeoutId);
+      session.removeListener('deliver_sm', handleDeliveryReceipt);
+      reject(err);
+    }
   });
 };
 
@@ -99,7 +111,7 @@ const sendMultipleSMS = async (phoneNumber, messages) => {
       console.log(`SMS ${i + 1}/${messages.length} confirmé pour +${phoneNumber}`);
     } catch (err) {
       console.error(`Échec de l'envoi du SMS ${i + 1} à +${phoneNumber}:`, err.message);
-      // Option : stopper la séquence en cas d'échec
+      // Option: stoppe la séquence en cas d'erreur
       // throw err;
     }
   }
@@ -113,8 +125,7 @@ smsQueue.process(10, async (job, done) => {
       const { phoneNumber, messages } = job.data;
       await sendMultipleSMS(phoneNumber, messages);
       done();
-    }
-    if (meta.type === 'message') {
+    } else if (meta.type === 'message') {
       const { phoneNumber, message } = job.data;
       const session = getAvailableSession();
       await sendSMS(session, phoneNumber, message);
