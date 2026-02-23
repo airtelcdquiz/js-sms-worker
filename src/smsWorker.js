@@ -12,6 +12,7 @@ const SMPP_CONFIG = {
   source_addr: 'AirtelQuiz',
 };
 
+const cleanMessage = message ? removeAccents(truncateString(`${message}`, 160)) : '';
 
 // Initialiser 10 sessions SMPP dans un pool
 const smppSessions = [];
@@ -52,6 +53,8 @@ const sendSMS = (session, phoneNumber, message) => {
         reject(new Error('Aucune session SMPP disponible'));
         return;
       }
+
+      const cleanMessage = removeAccents(truncateString(`${message}`, 160));
   
       session.submit_sm({
         source_addr: 'AirtelQuiz',
@@ -61,7 +64,7 @@ const sendSMS = (session, phoneNumber, message) => {
         dest_addr_ton: 1,
         dest_addr_npi: 1,
         destination_addr: `+${phoneNumber}`,
-        short_message: removeAccents(truncateString(`${message}`, 160)),
+        short_message: cleanMessage,
       }, (pdu) => {
         if (pdu.command_status === 0) {
           console.log(`Message envoyé à +${phoneNumber}`);
