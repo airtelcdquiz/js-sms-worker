@@ -74,26 +74,42 @@ const sendSMS = (session, phoneNumber, message) => {
     });
   };
 
+// Fonction pour envoyer un tableau de messages à un même numéro
+const sendMultipleSMS = async (phoneNumber, messages) => {
+  for (let i = 0; i < messages.length; i++) {
+    const session = getAvailableSession();
+    if (!session) throw new Error('Aucune session SMPP disponible');
+
+    try {
+      await sendSMS(session, phoneNumber, messages[i]);
+      console.log(`SMS ${i + 1}/${messages.length} envoyé à +${phoneNumber}`);
+    } catch (err) {
+      console.error(`Échec de l'envoi du SMS ${i + 1} à +${phoneNumber}:`, err.message);
+      // Si tu veux arrêter la séquence en cas d'erreur, décommente la ligne suivante
+      // throw err;
+    }
+  }
+};
 
 // Processus Bull pour envoyer les SMS
 smsQueue.process(10, async (job, done) => {
-    const { phoneNumber, message } = job.data;
-    // if (job.data.type == 'multi') {
-    //     var phoneNumber = job.data.participant_phone;
-    //     var name = job.data.participant_full_name;
-    //     var message = job.data.message.replace("{name}", name);
-    // } else {
-    //     var phoneNumber = job.data.msisdn;
-    //     var message = job.data.message;
-    // }
+    const { jobType } = job.data ;
+    const { phoneNumber, message } = job.data; 
 
     try {
-      const session = getAvailableSession();
-      // Utilisation de la session SMPP disponible pour l'envoi du SMS
-      await sendSMS(session, phoneNumber, message);
-      console.log(`SMS envoyé à ${phoneNumber}`);
-      console.log(`SMS >> ${message}`);
-      done()
+      if( jobType == "bulk-message" ){
+        const { phoneNumber, messages } = job.data;
+        await sendMultipleSMS(phoneNumber, messages);
+        done()
+      }
+      if ( jobType == "message" ) {
+        const session = getAvailableSession();
+        // Utilisation de la session SMPP disponible pour l'envoi du SMS
+        await sendSMS(session, phoneNumber, message);
+        console.log(`SMS envoyé à ${phoneNumber}`);
+        console.log(`SMS >> ${message}`);
+        done()
+      }
     } catch (error) {
       console.error(`Erreur lors de l'envoi du SMS à ${phoneNumber}:`, error.message);
       done({ message: error.message });
