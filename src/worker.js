@@ -7,11 +7,11 @@ console.log("🚀 Worker SMS démarré...");
 smsQueue.process(5, async (job, done) => {
   const { meta } = job.data;
   try {
-    if (meta.type === 'bulk-message') {
+    if (meta.type == 'bulk-message') {
       const { phoneNumber, messages } = job.data;
       await sendMultipleSMS(phoneNumber, messages);
       done();
-    } else if (meta.type === 'message') {
+    } else if (meta.type == 'message') {
       const { phoneNumber, message } = job.data;
       const session = getAvailableSession();
       await sendSMS(session, phoneNumber, message);
