@@ -12,9 +12,8 @@ smsQueue.process(5, async (job, done) => {
       await sendMultipleSMS(phoneNumber, messages);
       done();
     } else if (meta.type == 'message') {
-      const { phoneNumber, message } = job.data;
-      const session = getAvailableSession();
-      await sendSMS(session, phoneNumber, message);
+      const { phoneNumber, message } = job.data; 
+      await sendSMS(phoneNumber, message);
       done();
     }
   } catch (error) {
