@@ -54,7 +54,7 @@ app.post("/send-sms", async (req, res) => {
   const { phoneNumber, message } = req.body;
 
   const job = await smsQueue.add(
-    { phoneNumber, message },
+    { phoneNumber, message, meta:{type:'message'}},
     {
       attempts: 3,
       backoff: 5000,
